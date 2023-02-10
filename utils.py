@@ -36,7 +36,7 @@ def configBoard(handle, config):
                                          config.params[1], config.params[2], config.params[3],
                                          config.params[4:config.params_length])                                  
 
-def camera_initFromFile(fileName, index):
+def camera_initCPLD(fileName, index):
     # load config file
     config = arducam_config_parser.LoadConfigFile(fileName)
 
@@ -69,34 +69,56 @@ def camera_initFromFile(fileName, index):
 
     ret, handle, rtn_cfg = ArducamSDK.Py_ArduCam_open(cfg, index)
     # ret, handle, rtn_cfg = ArducamSDK.Py_ArduCam_autoopen(cfg)
-    if ret == 0:
 
-        # ArducamSDK.Py_ArduCam_writeReg_8_8(handle,0x46,3,0x00)
-        usb_version = rtn_cfg['usbType']
+    if ret == 0:
         configs = config.configs
         configs_length = config.configs_length
         for i in range(configs_length):
             type = configs[i].type
-            if ((type >> 16) & 0xFF) != 0 and ((type >> 16) & 0xFF) != usb_version:
+            if ((type >> 16) & 0xFF) != 0 and ((type >> 16) & 0xFF) != rtn_cfg['usbType']:
                 continue
-            if type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_REG:
-                ArducamSDK.Py_ArduCam_writeSensorReg(
-                    handle, configs[i].params[0], configs[i].params[1])
-            elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_DELAY:
+            if type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_DELAY:
                 time.sleep(float(configs[i].params[0])/1000)
             elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_VRCMD:
                 configBoard(handle, configs[i])
+        return (True, handle, rtn_cfg, config, I2cAddr, color_mode)
 
-        ArducamSDK.Py_ArduCam_registerCtrls(
-            handle, config.controls, config.controls_length)
+    print("initialize fail, Error : {}".format(GetErrorString(ret)))
+    return (False, handle, rtn_cfg, config, I2cAddr, color_mode)
 
-        rtn_val, datas = ArducamSDK.Py_ArduCam_readUserData(
-            handle, 0x400-16, 16)
-        print("Serial: %c%c%c%c-%c%c%c%c-%c%c%c%c" % (datas[0], datas[1], datas[2], datas[3],
-                                                      datas[4], datas[5], datas[6], datas[7],
-                                                      datas[8], datas[9], datas[10], datas[11]))
+def camera_initSensor(handle, readConfig, usb_version, I2cAddr):
+    # ArducamSDK.Py_ArduCam_writeReg_8_8(handle,0x46,3,0x00)
+    # usb_version = rtn_cfg['usbType']
+    configs = readConfig.configs
+    configs_length = readConfig.configs_length
+    for i in range(configs_length):
+        type = configs[i].type
+        if ((type >> 16) & 0xFF) != 0 and ((type >> 16) & 0xFF) != usb_version:
+            continue
+        if type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_REG:
+            ArducamSDK.Py_ArduCam_writeSensorReg(
+                handle, configs[i].params[0], configs[i].params[1])
+        elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_DELAY:
+            time.sleep(float(configs[i].params[0])/1000)
+        elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_VRCMD:
+            configBoard(handle, configs[i])
 
-        return (True, handle, rtn_cfg, color_mode)
+    ArducamSDK.Py_ArduCam_registerCtrls(
+        handle, readConfig.controls, readConfig.controls_length)
 
-    print("open fail, Error : {}".format(GetErrorString(ret)))
-    return (False, handle, rtn_cfg, color_mode)
+    rtn_val, datas = ArducamSDK.Py_ArduCam_readUserData(
+        handle, 0x400-16, 16)
+    print("Serial: %c%c%c%c-%c%c%c%c-%c%c%c%c" % (datas[0], datas[1], datas[2], datas[3],
+                                                    datas[4], datas[5], datas[6], datas[7],
+                                                    datas[8], datas[9], datas[10], datas[11]))
+                                    
+    ret, value = ArducamSDK.Py_ArduCam_readReg_8_8(handle, I2cAddr, 0x00)
+    if ret:
+        return False
+    return True
+
+def DetectI2c(camera):
+    ret = 0
+    if camera is not None:
+        ret, value = ArducamSDK.Py_ArduCam_readReg_8_8(camera.handle, camera.I2cAddr, 0x00)
+    return not ret

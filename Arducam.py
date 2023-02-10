@@ -11,16 +11,19 @@ class ArducamCamera(object):
         self.signal_ = threading.Condition()
         pass
 
-    def openCamera(self, fname, index=0):
-        self.isOpened, self.handle, self.cameraCfg, self.color_mode = camera_initFromFile(
+    def initDevice(self, fname, index=0):
+        self.isOpened, self.handle, self.cameraCfg, self.readConfig, self.I2cAddr, self.color_mode = camera_initCPLD(
             fname, index)
 
         return self.isOpened
+    
+    def initSensor(self):
+        return camera_initSensor(self.handle, self.readConfig, self.cameraCfg['usbType'], self.I2cAddr)
 
     def start(self):
         if not self.isOpened:
             raise RuntimeError("The camera has not been opened.")
-        
+
         self.running_ = True
         ArducamSDK.Py_ArduCam_setMode(self.handle, ArducamSDK.CONTINUOUS_MODE)
         self.capture_thread_ = threading.Thread(target=self.capture_thread)
@@ -76,9 +79,17 @@ class ArducamCamera(object):
         while self.running_:
             ret = ArducamSDK.Py_ArduCam_captureImage(self.handle)
             if ret > 255:
-                print("Error capture image, Error : {}".format(GetErrorString(ret)))
+                
                 if ret == ArducamSDK.USB_CAMERA_USB_TASK_ERROR:
+                    with self.signal_:
+                        self.signal_.notify()
                     break
+                elif ret == ArducamSDK.USB_CAMERA_USB_TIMEOUT_ERROR:
+                    continue
+                #     with self.signal_:
+                #         self.signal_.notify()
+                #     break
+                print("Error capture image, Error : {}".format(GetErrorString(ret)))
             elif ret > 0:
                 with self.signal_:
                     self.signal_.notify()
