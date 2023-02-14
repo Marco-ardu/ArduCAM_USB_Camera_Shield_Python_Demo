@@ -5,7 +5,6 @@ import cv2
 
 from Arducam import *
 from ImageConvert import *
-from DetectThread import DetectThread, I2CDeviceDetector, USBDeviceDetector
 
 exit_ = False
 
@@ -45,18 +44,6 @@ class HotPlugCamera():
         self.scale_width = self.preview_width
 
     def start(self):
-        # self.deviceDetector = USBDeviceDetector()
-        # self.deviceDetector.registerCallback(self.initDevice)
-
-        # self.i2cDeviceDetector = I2CDeviceDetector()
-        # self.i2cDeviceDetector.registerCallback(self.initSensor)
-
-        # self.detectThread = DetectThread()
-        # self.detectThread.daemon = True
-        # self.detectThread.start()
-        # self.detectThread.registerDetector(self.deviceDetector)
-        # self.detectThread.registerDetector(self.i2cDeviceDetector)
-
         self.displayThread = threading.Thread(target=self.runCamera)
         self.displayThread.daemon = True
         self.displayThread.start()
@@ -67,42 +54,25 @@ class HotPlugCamera():
     def stop(self):
         if self.displayThread:
             self.displayThread.stop()
-
-    def initDevice(self, flag):
+    
+    def notify(self, flag):
         if flag:
-            self.camera = ArducamCamera()
-
-            count = 0
-
-            while not self.camera.initDevice(self.config_file) and count < 3:
-                count += 1
-                time.sleep(1)
-
-            if count == 3:
-                raise RuntimeError("initialize CPLD Failed, try 3 times.")
-
-            self.camera.start()
-
             with self.signal_:
                 self.signal_.notify()
-        else:
-            self.camera = None
-
-        self.i2cDeviceDetector.setCamera(self.camera)
-
-    def initSensor(self, flag):
-        if flag and self.camera is not None:
-            self.camera.initSensor()
 
     def runCamera(self):
         global exit_
+        self.camera = ArducamCamera(self.config_file)
+        self.camera.registerCallback(self.notify)
         while not exit_:
+
             with self.signal_:
                 if self.signal_.wait(1) is False:
+                    print("wait")
                     continue
 
             while not exit_:
-                if self.camera is None:
+                if not self.camera.isOpened:
                     break
 
                 try:
@@ -143,7 +113,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--config-file', type=str, required=False, help='Specifies the configuration file.',
                         default="C:\code\ArduCAM_USB_Camera_Shield_Python_Demo\IMX219_MIPI_2Lane_RAW10_8b_1920x1080.cfg")
     parser.add_argument('-v', '--verbose', action='store_true', required=False, help='Output device information.')
-    parser.add_argument('--preview-width', type=int, required=False, default=-1, help='Set the display width')
+    parser.add_argument('--preview-width', type=int, required=False, default=720, help='Set the display width')
     parser.add_argument('-n', '--nopreview', action='store_true', required=False, help='Disable preview windows.')
 
     args = parser.parse_args()

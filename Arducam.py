@@ -1,28 +1,80 @@
 import threading
 
 import ArducamSDK
+from DetectThread import DetectThread, I2CDeviceDetector, USBDeviceDetector
 from utils import *
 
 
 class ArducamCamera(object):
-    def __init__(self):
+    def __init__(self, config_file):
         self.isOpened = False
         self.running_ = False
+        self.capture_thread_ = None
+        self.config_file = config_file
+        self.callback = None
         self.signal_ = threading.Condition()
+    
+        self.deviceDetector = USBDeviceDetector()
+        self.deviceDetector.registerCallback(self.initDevice)
+
+        self.i2cDeviceDetector = I2CDeviceDetector()
+        self.i2cDeviceDetector.registerCallback(self.initSensor)
+
+        self.detectThread = DetectThread()
+        self.detectThread.daemon = True
+        self.detectThread.start()
+        self.detectThread.registerDetector(self.deviceDetector)
+        self.detectThread.registerDetector(self.i2cDeviceDetector)
         pass
 
-    def openCamera(self, fname, index=0):
+    def openCamera(self, index=0):
         self.isOpened, self.handle, self.cameraCfg, self.color_mode = camera_initFromFile(
-            fname, index)
+            self.config_file, index)
 
         return self.isOpened
+
+    def registerCallback(self, callback):
+        self.callback = callback
+
+    def initDevice(self, flag, index=0):
+        if flag:
+            count = 0
+            while True:
+                self.isOpened, self.handle, self.cameraCfg, self.readConfig, self.I2cAddr, self.color_mode = camera_initCPLD(
+                    self.config_file, index)
+                if self.isOpened or count >= 3:
+                    break
+                count += 1
+                time.sleep(1)
+
+            if count >= 3:
+                raise RuntimeError("initialize CPLD Failed, try 3 times.")
+
+            self.start()
+
+            if self.callback:
+                self.callback(self.isOpened)
+
+            self.i2cDeviceDetector.setCamera(self)
+        else:
+            self.handle = None
+            self.running_ = False
+            self.i2cDeviceDetector.setCamera(None)
+            if self.capture_thread_:
+                self.capture_thread_.join()
+                self.capture_thread_ = None
+    
+    def initSensor(self, flag):
+        if flag:
+            camera_initSensor(self.handle, self.readConfig, self.cameraCfg['usbType'], self.I2cAddr)
 
     def start(self):
         if not self.isOpened:
             raise RuntimeError("The camera has not been opened.")
-        
+
         self.running_ = True
         ArducamSDK.Py_ArduCam_setMode(self.handle, ArducamSDK.CONTINUOUS_MODE)
+
         self.capture_thread_ = threading.Thread(target=self.capture_thread)
         self.capture_thread_.daemon = True
         self.capture_thread_.start()
@@ -72,13 +124,17 @@ class ArducamCamera(object):
             raise RuntimeError("Error beginning capture, Error : {}".format(GetErrorString(ret)))
 
         print("Capture began, Error : {}".format(GetErrorString(ret)))
-        
         while self.running_:
             ret = ArducamSDK.Py_ArduCam_captureImage(self.handle)
             if ret > 255:
-                print("Error capture image, Error : {}".format(GetErrorString(ret)))
+                
                 if ret == ArducamSDK.USB_CAMERA_USB_TASK_ERROR:
+                    with self.signal_:
+                        self.signal_.notify()
                     break
+                elif ret == ArducamSDK.USB_CAMERA_USB_TIMEOUT_ERROR:
+                    continue
+                print("Error capture image, Error : {}".format(GetErrorString(ret)))
             elif ret > 0:
                 with self.signal_:
                     self.signal_.notify()
@@ -119,3 +175,65 @@ class ArducamCamera(object):
 
         print(usb_info)
 
+    def getCamInformation(self):
+        self.version = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 00)[1]
+        self.year = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 5)[1]
+        self.mouth = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 6)[1]
+        self.day = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 7)[1]
+        cpldVersion = "V{:d}.{:d}\t20{:0>2d}/{:0>2d}/{:0>2d}".format(self.version >> 4, self.version & 0x0F, self.year,
+                                                                     self.mouth, self.day)
+        return cpldVersion
+
+    def getMipiDataInfo(self):
+        mipiData = {"mipiDataID": "",
+                    "mipiDataRow": "",
+                    "mipiDataCol": "",
+                    "mipiDataClk": "",
+                    "mipiWordCount": "",
+                    "mFramerateValue": ""}
+        self.getCamInformation()
+        cpld_version = self.version & 0xF0
+        date = (self.year * 1000 + self.mouth * 100 + self.day)
+        if cpld_version not in [0x20, 0x30]:
+            return None
+        if cpld_version == 0x20 and date < (19 * 1000 + 7 * 100 + 8):
+            return None
+        elif cpld_version == 0x30 and date < (19 * 1000 + 3 * 100 + 22):
+            return None
+
+        mipiDataID = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x1E)[1]
+        mipiData["mipiDataID"] = hex(mipiDataID)
+
+        rowMSB = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x21)[1]
+        rowLSB = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x22)[1]
+        mipiDataRow = ((rowMSB & 0xFF) << 8) | (rowLSB & 0xFF)
+        mipiData["mipiDataRow"] = str(mipiDataRow)
+
+        colMSB = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x1F)[1]
+        colLSB = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x20)[1]
+        mipiDataCol = ((colMSB & 0xFF) << 8) | (colLSB & 0xFF)
+        mipiData["mipiDataCol"] = str(mipiDataCol)
+
+        # after 2020/06/22
+        if cpld_version == 0x20 and date < (20 * 1000 + 6 * 100 + 22):
+            return mipiData
+        elif cpld_version == 0x30 and date < (20 * 1000 + 6 * 100 + 22):
+            return mipiData
+
+        mipiDataClk = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x27)[1]
+        mipiData["mipiDataClk"] = str(mipiDataClk)
+
+        if (cpld_version == 0x30 and date >= (21 * 1000 + 3 * 100 + 1)) or (
+                cpld_version == 0x20 and date >= (21 * 1000 + 9 * 100 + 6)):
+            wordCountMSB = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x25)[1]
+            wordCountLSB = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x26)[1]
+            mipiWordCount = ((wordCountMSB & 0xFF) << 8) | (wordCountLSB & 0xFF)
+            mipiData["mipiWordCount"] = str(mipiWordCount)
+
+        if date >= (21 * 1000 + 6 * 100 + 22):
+            fpsMSB = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x2A)[1]
+            fpsLSB = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 0x2B)[1]
+            fps = (fpsMSB << 8 | fpsLSB) / 4.0
+            fpsResult = "{:.1f}".format(fps)
+            mipiData["mFramerateValue"] = fpsResult
+        return mipiData

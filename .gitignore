@@ -1,2 +1,6 @@
 .vscode
 *.pyc
+.idea
+__pycache__
+test.py
+*.cfg
