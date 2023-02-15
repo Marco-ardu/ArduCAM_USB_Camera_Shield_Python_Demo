@@ -52,7 +52,7 @@ class LinuxUSBDevice:
 
 
 DetectDeviceMap = {
-    "": LinuxUSBDevice,
+    "Linux": LinuxUSBDevice,
     "win32": WinUSBDevice
 }
 
