@@ -16,19 +16,12 @@ class WinUSBDevice:
         pass
 
     def get_usb_device_id(self):
-        # import win32com.client
-        # wmi = win32com.client.GetObject("winmgmts:")
-        # for usb in wmi.InstancesOf("Win32_USBHub"):
-        #     print(usb)
-        #     if usb.DeviceID == r"USB\VID_04B4&PID_03F2\6&37588625&0&1":
-        #         return True
-        # return False
         device_id = None
         import pythoncom
         pythoncom.CoInitialize()
         import wmi
         c = wmi.WMI()
-        wql = "Select DeviceID From Win32_PnPEntity WHERE DeviceID LIKE 'USB\\VID_04B4&PID_03F2%' OR  DeviceID LIKE 'USB\\VID_04B4&PID_03F1%'"
+        wql = "Select DeviceID From Win32_PnPEntity WHERE DeviceID LIKE 'USB\\VID_04B4&PID_03F2%' OR  DeviceID LIKE 'USB\\VID_52CB&PID_52CB%'"
         for item in c.query(wql):
             device_id = item
         if device_id:
@@ -138,46 +131,3 @@ class DetectThread(threading.Thread):
 
     def __del__(self):
         print("DetectThread Has been destroyed")
-
-# class DetectThread(threading.Thread):
-#     def __init__(self) -> None:
-#         super().__init__()
-#         self.is_detected = False
-#         self.__running = False
-#         self.__system = getSystem()
-#         self.detectDevice = DetectDeviceMap[self.__system]()
-#         self.callbackCPLD = None
-#         self.callbackCamera = None
-#         self.camera = None
-
-#     def registerCPLDCallback(self, callback_func):
-#         self.callbackCPLD = callback_func
-
-#     def registerCameraCallback(self, callback_func):
-#         self.callbackCamera = callback_func
-
-#     def run(self):
-#         self.__running = True
-
-#         while self.__running:
-#             if self.detectDevice.get_usb_device_id():
-#                 if self.is_detected is False and self.callbackCPLD is not None:
-#                     self.camera = self.callbackCPLD(True)
-#                     self.callbackCamera(True)
-#                 self.is_detected = True
-#             else:
-#                 if self.is_detected and self.callbackCPLD is not None:
-#                     self.camera = self.callbackCPLD(False)
-#                 self.is_detected = False
-
-#             if DetectI2c(self.camera) and self.callbackCamera is not None:
-#                 self.callbackCamera(True)
-#             elif self.callbackCamera is not None:
-#                 self.callbackCamera(False)
-#             sleep(0.5)
-
-#     def stop(self):
-#         self.__running = False
-
-#     def __del__(self):
-#         print("DetectThread Has been destroyed")

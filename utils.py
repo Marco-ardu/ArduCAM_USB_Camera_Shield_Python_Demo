@@ -178,14 +178,11 @@ def camera_initSensor(handle, readConfig, usb_version, I2cAddr):
     print("Serial: %c%c%c%c-%c%c%c%c-%c%c%c%c" % (datas[0], datas[1], datas[2], datas[3],
                                                     datas[4], datas[5], datas[6], datas[7],
                                                     datas[8], datas[9], datas[10], datas[11]))
-                                    
-    # ret, value = ArducamSDK.Py_ArduCam_readReg_8_8(handle, I2cAddr, 0x00)
-    # if ret:
-    #     return False
-    # return True
 
 def DetectI2c(camera):
     ret = 0
     if camera is not None:
-        ret, value = ArducamSDK.Py_ArduCam_readReg_8_8(camera.handle, camera.I2cAddr, 0x00)
-    return not ret
+        # ret, value = ArducamSDK.Py_ArduCam_readReg_8_8(camera.handle, camera.I2cAddr, 0x00)
+        ret, value_hi = ArducamSDK.Py_ArduCam_readReg_16_8(camera.handle, camera.I2cAddr, 0x300a)
+        ret, value_lo = ArducamSDK.Py_ArduCam_readReg_16_8(camera.handle, camera.I2cAddr, 0x300b)
+    return value_hi == 0x56 and value_lo == 0x40

@@ -4,3 +4,6 @@
 __pycache__
 test.py
 *.cfg
+*.spec
+build
+dist
