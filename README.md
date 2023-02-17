@@ -23,14 +23,9 @@ chmod +x ./configure_udev_rules.sh
 
 ## Install dependencies
 
-### Arducam Library
-```
+```shell
 python3 -m pip install -U pip
-python3 -m pip install arducam_config_parser ArducamSDK
-```
-### OpenCV
-```
-python3 -m pip install opencv-python numpy
+python3 -m pip install -r requirements.txt
 ```
 **Note: For Jetson no need to install OpenCV dependencies**
 
@@ -38,6 +33,11 @@ python3 -m pip install opencv-python numpy
 ```shell
 git clone https://github.com/ArduCAM/ArduCAM_USB_Camera_Shield_Python_Demo.git
 cd ArduCAM_USB_Camera_Shield_Python_Demo
+```
+
+## Pack 
+```shell
+pyinstaller -F ArduCam_Demo.py --collect-binaries arducam_config_parser
 ```
 
 ## Run the Demo
