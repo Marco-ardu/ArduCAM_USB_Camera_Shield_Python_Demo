@@ -1,6 +1,11 @@
-arducam_config_parser==0.1.0
-ArducamSDK==1.0.2
-numpy==1.22.4
+arducam_config_parser
+ArducamSDK
+numpy
 # opencv_python==4.5.5.64
-pywin32==305
-WMI==1.5.1
+pywin32
+WMI
+
+Pillow
+loguru
+argparse
+opencv-python

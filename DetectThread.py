@@ -3,18 +3,23 @@ import subprocess
 import sys
 from time import sleep
 import threading
-from utils import DetectI2c
+from utils import DetectI2c, setPath
 import abc
+from loguru import logger
 
 
+@logger.catch
 def getSystem():
     return sys.platform
 
+
+setPath()
 
 class WinUSBDevice:
     def __init__(self) -> None:
         pass
 
+    @logger.catch
     def get_usb_device_id(self):
         device_id = None
         import pythoncom
@@ -34,6 +39,7 @@ class LinuxUSBDevice:
         self.device_re = re.compile(b"Bus\s+(?P<bus>\d+)\s+Device\s+(?P<device>\d+).+ID\s(?P<id>\w+:\w+)\s(?P<tag>.+)$",
                                     re.I)
 
+    @logger.catch
     def get_usb_device_id(self):
         df = subprocess.check_output("lsusb")
         for i in df.split(b'\n'):
@@ -59,6 +65,7 @@ class AbstractDetector(abc.ABC):
     def run(self):
         pass
 
+    @logger.catch
     def registerCallback(self, callback):
         self.callback = callback
 
@@ -70,6 +77,7 @@ class USBDeviceDetector(AbstractDetector):
         self.detectDevice = DetectDeviceMap[self.__system]()
         self.is_detected = False
 
+    @logger.catch
     def run(self):
         if self.detectDevice.get_usb_device_id():
             if self.is_detected is False and self.callback is not None:
@@ -87,6 +95,7 @@ class I2CDeviceDetector(AbstractDetector):
         self.detected = False
         self.camera = None
 
+    @logger.catch
     def run(self):
         if self.camera is None:
             return
@@ -100,6 +109,7 @@ class I2CDeviceDetector(AbstractDetector):
             self.detected = False
             self.callback(self.detected)
 
+    @logger.catch
     def setCamera(self, camera):
         self.camera = camera
         if camera is None:
@@ -112,12 +122,15 @@ class DetectThread(threading.Thread):
         self.__running = False
         self.detectors = []
 
+    @logger.catch
     def registerDetector(self, detector):
         self.detectors.append(detector)
 
+    @logger.catch
     def removeDetector(self, detector):
         self.detectors.remove(detector)
 
+    @logger.catch
     def run(self):
         self.__running = True
 
@@ -126,8 +139,6 @@ class DetectThread(threading.Thread):
                 detector.run()
             sleep(0.5)
 
+    @logger.catch
     def stop(self):
         self.__running = False
-
-    def __del__(self):
-        print("DetectThread Has been destroyed")

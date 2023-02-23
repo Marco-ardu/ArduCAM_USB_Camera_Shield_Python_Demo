@@ -1,8 +1,11 @@
 import threading
-
+from loguru import logger
 import ArducamSDK
 from DetectThread import DetectThread, I2CDeviceDetector, USBDeviceDetector
 from utils import *
+
+
+setPath()
 
 
 class ArducamCamera(object):
@@ -27,28 +30,26 @@ class ArducamCamera(object):
         self.detectThread.registerDetector(self.i2cDeviceDetector)
         pass
 
+    @logger.catch
     def openCamera(self, index=0):
         self.isOpened, self.handle, self.cameraCfg, self.color_mode = camera_initFromFile(
             self.config_file, index)
 
         return self.isOpened
 
+    @logger.catch
     def registerCallback(self, callback):
         self.callback = callback
 
+    @logger.catch
     def initDevice(self, flag, index=0):
         if flag:
-            count = 0
             while True:
                 self.isOpened, self.handle, self.cameraCfg, self.readConfig, self.I2cAddr, self.color_mode = camera_initCPLD(
                     self.config_file, index)
-                if self.isOpened or count >= 3:
+                if self.isOpened:
                     break
-                count += 1
                 time.sleep(1)
-
-            if count >= 3:
-                raise RuntimeError("initialize CPLD Failed, try 3 times.")
 
             self.start()
 
@@ -63,11 +64,13 @@ class ArducamCamera(object):
             if self.capture_thread_:
                 self.capture_thread_.join()
                 self.capture_thread_ = None
-    
+
+    @logger.catch
     def initSensor(self, flag):
         if flag:
             camera_initSensor(self.handle, self.readConfig, self.cameraCfg['usbType'], self.I2cAddr)
 
+    @logger.catch
     def start(self):
         if not self.isOpened:
             raise RuntimeError("The camera has not been opened.")
@@ -79,9 +82,10 @@ class ArducamCamera(object):
         self.capture_thread_.daemon = True
         self.capture_thread_.start()
 
+    @logger.catch(reraise=True)
     def read(self, timeout=1500):
         if not self.running_:
-            raise RuntimeError("The camera is not running.")
+            raise Exception("The camera is not running.")
 
         if ArducamSDK.Py_ArduCam_availableImage(self.handle) <= 0:
             with self.signal_:
@@ -98,6 +102,7 @@ class ArducamCamera(object):
     
         return (True, data, cfg)
 
+    @logger.catch
     def stop(self):
         if not self.running_:
             raise RuntimeError("The camera is not running.")
@@ -105,6 +110,7 @@ class ArducamCamera(object):
         self.running_ = False
         self.capture_thread_.join()
 
+    @logger.catch
     def closeCamera(self):
         if not self.isOpened:
             raise RuntimeError("The camera has not been opened.")
@@ -115,7 +121,7 @@ class ArducamCamera(object):
         ArducamSDK.Py_ArduCam_close(self.handle)
         self.handle = None
 
-
+    @logger.catch
     def capture_thread(self):
         ret = ArducamSDK.Py_ArduCam_beginCaptureImage(self.handle)
 
@@ -123,7 +129,7 @@ class ArducamCamera(object):
             self.running_ = False
             raise RuntimeError("Error beginning capture, Error : {}".format(GetErrorString(ret)))
 
-        print("Capture began, Error : {}".format(GetErrorString(ret)))
+        logger.info("Capture began, Error : {}".format(GetErrorString(ret)))
         while self.running_:
             ret = ArducamSDK.Py_ArduCam_captureImage(self.handle)
             if ret > 255:
@@ -134,7 +140,7 @@ class ArducamCamera(object):
                     break
                 elif ret == ArducamSDK.USB_CAMERA_USB_TIMEOUT_ERROR:
                     continue
-                print("Error capture image, Error : {}".format(GetErrorString(ret)))
+                logger.info("Error capture image, Error : {}".format(GetErrorString(ret)))
             elif ret > 0:
                 with self.signal_:
                     self.signal_.notify()
@@ -142,9 +148,11 @@ class ArducamCamera(object):
         self.running_ = False
         ArducamSDK.Py_ArduCam_endCaptureImage(self.handle)
 
+    @logger.catch
     def setCtrl(self, func_name, val):
         return ArducamSDK.Py_ArduCam_setCtrl(self.handle, func_name, val)
 
+    @logger.catch
     def dumpDeviceInfo(self):
         USB_CPLD_I2C_ADDRESS=0x46
         cpld_info={}
@@ -162,7 +170,7 @@ class ArducamCamera(object):
         cpld_info["mouth"] = mouth
         cpld_info["day"] = day
 
-        print(cpld_info)
+        logger.info(cpld_info)
 
         ret, data = ArducamSDK.Py_ArduCam_getboardConfig(
             self.handle, 0x80, 0x00, 0x00, 2
@@ -173,8 +181,9 @@ class ArducamCamera(object):
         usb_info["interface"] = 2 if self.cameraCfg["usbType"] == 4 else 3
         usb_info["device"] = 3 if self.cameraCfg["usbType"] == 3 or self.cameraCfg["usbType"] == 4 else 2
 
-        print(usb_info)
+        logger.info(usb_info)
 
+    @logger.catch
     def getCamInformation(self):
         self.version = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 00)[1]
         self.year = ArducamSDK.Py_ArduCam_readReg_8_8(self.handle, 0x46, 5)[1]
@@ -184,6 +193,7 @@ class ArducamCamera(object):
                                                                      self.mouth, self.day)
         return cpldVersion
 
+    @logger.catch
     def getMipiDataInfo(self):
         mipiData = {"mipiDataID": "",
                     "mipiDataRow": "",

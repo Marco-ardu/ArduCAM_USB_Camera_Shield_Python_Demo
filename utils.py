@@ -1,6 +1,14 @@
+import sys
+from pathlib import Path
+
 import ArducamSDK
 import arducam_config_parser
 import time
+
+import cv2
+from PIL import ImageDraw, ImageFont, Image
+import numpy as np
+from loguru import logger
 
 ErrorCode_Map = {
     0x0000: "USB_CAMERA_NO_ERROR",
@@ -28,14 +36,33 @@ ErrorCode_Map = {
     0xFF71: "USB_BOARD_FW_VERSION_NOT_SUPPORT_ERROR"
 }
 
+
+def setPath():
+    logPath = ''
+    if getattr(sys, 'frozen', False):
+        dirname = Path(sys.executable).resolve().parent
+        logPath = dirname / 'logs.txt'
+    elif __file__:
+        logPath = Path("./logs.txt")
+    logger.add(logPath.as_posix(), rotation='10 MB')
+
+
+setPath()
+
+
+@logger.catch
 def GetErrorString(ErrorCode):
     return ErrorCode_Map[ErrorCode]
 
+
+@logger.catch
 def configBoard(handle, config):
     ArducamSDK.Py_ArduCam_setboardConfig(handle, config.params[0],
                                          config.params[1], config.params[2], config.params[3],
-                                         config.params[4:config.params_length])                                  
+                                         config.params[4:config.params_length])
 
+
+@logger.catch
 def camera_initFromFile(fileName, index):
     # load config file
     config = arducam_config_parser.LoadConfigFile(fileName)
@@ -50,7 +77,7 @@ def camera_initFromFile(fileName, index):
         ByteLength = 2
     FmtMode = camera_parameter["FORMAT"][0]
     color_mode = camera_parameter["FORMAT"][1]
-    print("color mode", color_mode)
+    logger.info("color mode: {}".format(color_mode))
 
     I2CMode = camera_parameter["I2C_MODE"]
     I2cAddr = camera_parameter["I2C_ADDR"]
@@ -84,7 +111,7 @@ def camera_initFromFile(fileName, index):
                 ArducamSDK.Py_ArduCam_writeSensorReg(
                     handle, configs[i].params[0], configs[i].params[1])
             elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_DELAY:
-                time.sleep(float(configs[i].params[0])/1000)
+                time.sleep(float(configs[i].params[0]) / 1000)
             elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_VRCMD:
                 configBoard(handle, configs[i])
 
@@ -92,16 +119,18 @@ def camera_initFromFile(fileName, index):
             handle, config.controls, config.controls_length)
 
         rtn_val, datas = ArducamSDK.Py_ArduCam_readUserData(
-            handle, 0x400-16, 16)
-        print("Serial: %c%c%c%c-%c%c%c%c-%c%c%c%c" % (datas[0], datas[1], datas[2], datas[3],
+            handle, 0x400 - 16, 16)
+        logger.info("Serial: %c%c%c%c-%c%c%c%c-%c%c%c%c" % (datas[0], datas[1], datas[2], datas[3],
                                                       datas[4], datas[5], datas[6], datas[7],
                                                       datas[8], datas[9], datas[10], datas[11]))
 
-        return (True, handle, rtn_cfg, color_mode)
+        return True, handle, rtn_cfg, color_mode
 
-    print("open fail, Error : {}".format(GetErrorString(ret)))
-    return (False, handle, rtn_cfg, color_mode)
+    logger.info("open fail, Error : {}".format(GetErrorString(ret)))
+    return False, handle, rtn_cfg, color_mode
 
+
+@logger.catch
 def camera_initCPLD(fileName, index):
     # load config file
     config = arducam_config_parser.LoadConfigFile(fileName)
@@ -112,11 +141,11 @@ def camera_initCPLD(fileName, index):
 
     BitWidth = camera_parameter["BIT_WIDTH"]
     ByteLength = 1
-    if BitWidth > 8 and BitWidth <= 16:
+    if 8 < BitWidth <= 16:
         ByteLength = 2
     FmtMode = camera_parameter["FORMAT"][0]
     color_mode = camera_parameter["FORMAT"][1]
-    print("color mode", color_mode)
+    logger.info("color mode: {}".format(color_mode))
 
     I2CMode = camera_parameter["I2C_MODE"]
     I2cAddr = camera_parameter["I2C_ADDR"]
@@ -144,14 +173,16 @@ def camera_initCPLD(fileName, index):
             if ((type >> 16) & 0xFF) != 0 and ((type >> 16) & 0xFF) != rtn_cfg['usbType']:
                 continue
             if type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_DELAY:
-                time.sleep(float(configs[i].params[0])/1000)
+                time.sleep(float(configs[i].params[0]) / 1000)
             elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_VRCMD:
                 configBoard(handle, configs[i])
-        return (True, handle, rtn_cfg, config, I2cAddr, color_mode)
+        return True, handle, rtn_cfg, config, I2cAddr, color_mode
 
-    print("initialize fail, Error : {}".format(GetErrorString(ret)))
-    return (False, handle, rtn_cfg, config, I2cAddr, color_mode)
+    logger.error("initialize fail, Error : {}".format(GetErrorString(ret)))
+    return False, handle, rtn_cfg, config, I2cAddr, color_mode
 
+
+@logger.catch
 def camera_initSensor(handle, readConfig, usb_version, I2cAddr):
     # ArducamSDK.Py_ArduCam_writeReg_8_8(handle,0x46,3,0x00)
     # usb_version = rtn_cfg['usbType']
@@ -166,7 +197,7 @@ def camera_initSensor(handle, readConfig, usb_version, I2cAddr):
             ArducamSDK.Py_ArduCam_writeSensorReg(
                 handle, configs[i].params[0], configs[i].params[1])
         elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_DELAY:
-            time.sleep(float(configs[i].params[0])/1000)
+            time.sleep(float(configs[i].params[0]) / 1000)
         elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_VRCMD:
             configBoard(handle, configs[i])
 
@@ -174,15 +205,29 @@ def camera_initSensor(handle, readConfig, usb_version, I2cAddr):
         handle, readConfig.controls, readConfig.controls_length)
 
     rtn_val, datas = ArducamSDK.Py_ArduCam_readUserData(
-        handle, 0x400-16, 16)
-    print("Serial: %c%c%c%c-%c%c%c%c-%c%c%c%c" % (datas[0], datas[1], datas[2], datas[3],
-                                                    datas[4], datas[5], datas[6], datas[7],
-                                                    datas[8], datas[9], datas[10], datas[11]))
+        handle, 0x400 - 16, 16)
+    logger.info("Serial: %c%c%c%c-%c%c%c%c-%c%c%c%c" % (datas[0], datas[1], datas[2], datas[3],
+                                                  datas[4], datas[5], datas[6], datas[7],
+                                                  datas[8], datas[9], datas[10], datas[11]))
 
+
+@logger.catch
 def DetectI2c(camera):
     ret = 0
+    value_hi = 0
+    value_lo = 0
     if camera is not None:
         # ret, value = ArducamSDK.Py_ArduCam_readReg_8_8(camera.handle, camera.I2cAddr, 0x00)
         ret, value_hi = ArducamSDK.Py_ArduCam_readReg_16_8(camera.handle, camera.I2cAddr, 0x300a)
         ret, value_lo = ArducamSDK.Py_ArduCam_readReg_16_8(camera.handle, camera.I2cAddr, 0x300b)
     return value_hi == 0x56 and value_lo == 0x40
+
+
+@logger.catch
+def cv2AddChineseText(img, text, position, textColor=(0, 255, 0), textSize=30):
+    if isinstance(img, np.ndarray):
+        img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(img)
+    fontStyle = ImageFont.truetype("font/simsun.ttc", textSize, encoding="utf-8")
+    draw.text(position, text, textColor, font=fontStyle)
+    return cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)

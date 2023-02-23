@@ -1,14 +1,17 @@
 import argparse
-import time
 import signal
-import cv2
 
+import numpy as np
+from loguru import logger
 from Arducam import *
 from ImageConvert import *
 
 exit_ = False
 
+setPath()
 
+
+@logger.catch
 def sigint_handler(signum, frame):
     global exit_
     exit_ = True
@@ -18,12 +21,13 @@ signal.signal(signal.SIGINT, sigint_handler)
 signal.signal(signal.SIGTERM, sigint_handler)
 
 
+@logger.catch
 def display_fps(index):
     display_fps.frame_count += 1
 
     current = time.time()
     if current - display_fps.start >= 1:
-        print("fps: {}".format(display_fps.frame_count))
+        logger.info("fps: {}".format(display_fps.frame_count))
         display_fps.frame_count = 0
         display_fps.start = current
 
@@ -32,7 +36,7 @@ display_fps.start = time.time()
 display_fps.frame_count = 0
 
 
-class HotPlugCamera():
+class HotPlugCamera:
     def __init__(self, args):
         self.camera = None
         self.signal_ = threading.Condition()
@@ -45,23 +49,28 @@ class HotPlugCamera():
         self.scale_width = self.preview_width
         self.scale_height = args.preview_height
 
+    @logger.catch
     def start(self):
         self.displayThread = threading.Thread(target=self.runCamera)
         self.displayThread.daemon = True
         self.displayThread.start()
 
+    @logger.catch
     def join(self):
         self.displayThread.join()
 
+    @logger.catch
     def stop(self):
         if self.displayThread:
             self.displayThread.stop()
-    
+
+    @logger.catch
     def notify(self, flag):
         if flag:
             with self.signal_:
                 self.signal_.notify()
 
+    @logger.catch
     def runCamera(self):
         global exit_
         self.camera = ArducamCamera(self.config_file)
@@ -73,7 +82,15 @@ class HotPlugCamera():
 
             with self.signal_:
                 if self.signal_.wait(1) is False:
-                    print("wait")
+                    mind = cv2AddChineseText(
+                                            np.full(fill_value=255, shape=(1080, 1920, 3), dtype=np.uint8),
+                                            "请重新连接USB接口",
+                                            (450, 70),
+                                            (0, 0, 255),
+                                            50)
+                    cv2.imshow("Arducam", mind)
+                    cv2.waitKey(1)
+                    logger.info("wait")
                     continue
 
             while not exit_:
@@ -82,7 +99,7 @@ class HotPlugCamera():
 
                 try:
                     ret, data, cfg = self.camera.read()
-                except:
+                except Exception:
                     break
 
                 display_fps(0)
@@ -91,8 +108,16 @@ class HotPlugCamera():
                     continue
 
                 if ret:
+                    if data is None:
+                        logger.info("data is None")
+                        continue
+
                     image = convert_image(data, cfg, self.camera.color_mode)
-                    
+
+                    if image is None:
+                        logger.info("image is None")
+                        continue
+
                     if self.fullscreen:
                         x, y, w, h = cv2.getWindowImageRect('Arducam')
                         scale = h / image.shape[0]
@@ -107,13 +132,20 @@ class HotPlugCamera():
                             borderType=cv2.BORDER_CONSTANT,
                         )
 
-                    elif self.scale_width != -1:   
+                    elif self.scale_width != -1:
                         scale = self.scale_width / image.shape[1]
                         image = cv2.resize(image, None, fx=scale, fy=scale)
 
                     cv2.imshow("Arducam", image)
                 else:
-                    print("timeout")
+                    mind = cv2AddChineseText(
+                                            np.full(fill_value=255, shape=(1080, 1920, 3), dtype=np.uint8),
+                                            "请连接Sensor模组",
+                                            (450, 70),
+                                            (0, 0, 255),
+                                            50)
+                    cv2.imshow("Arducam", mind)
+                    logger.info("timeout")
 
                 key = cv2.waitKey(1)
                 if key == ord('q'):
