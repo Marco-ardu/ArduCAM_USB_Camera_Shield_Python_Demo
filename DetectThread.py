@@ -101,7 +101,6 @@ class I2CDeviceDetector(AbstractDetector):
             return
 
         tmp = DetectI2c(self.camera)
-        # print("tmp", tmp)
         if tmp and self.callback is not None and not self.detected:
             self.detected = True
             self.callback(self.detected)

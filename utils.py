@@ -198,8 +198,8 @@ def camera_initSensor(handle, readConfig, usb_version, I2cAddr):
                 handle, configs[i].params[0], configs[i].params[1])
         elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_DELAY:
             time.sleep(float(configs[i].params[0]) / 1000)
-        elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_VRCMD:
-            configBoard(handle, configs[i])
+        # elif type & 0xFFFF == arducam_config_parser.CONFIG_TYPE_VRCMD:
+        #     configBoard(handle, configs[i])
 
     ArducamSDK.Py_ArduCam_registerCtrls(
         handle, readConfig.controls, readConfig.controls_length)
@@ -217,10 +217,14 @@ def DetectI2c(camera):
     value_hi = 0
     value_lo = 0
     if camera is not None:
+        # ret, value = ArducamSDK.Py_ArduCam_readSensorReg(camera.handle, 0x0F12)
+        # logger.info("0x{:02x}".format(value))
         # ret, value = ArducamSDK.Py_ArduCam_readReg_8_8(camera.handle, camera.I2cAddr, 0x00)
-        ret, value_hi = ArducamSDK.Py_ArduCam_readReg_16_8(camera.handle, camera.I2cAddr, 0x300a)
-        ret, value_lo = ArducamSDK.Py_ArduCam_readReg_16_8(camera.handle, camera.I2cAddr, 0x300b)
+        ret, value_hi = ArducamSDK.Py_ArduCam_readReg_16_8(camera.handle, camera.I2cAddr, 0x300A)
+        ret, value_lo = ArducamSDK.Py_ArduCam_readReg_16_8(camera.handle, camera.I2cAddr, 0x300B)
     return value_hi == 0x56 and value_lo == 0x40
+    # logger.info("ret: {}, i2c addr: 0x{:02X}".format(ret, camera.I2cAddr))
+    # return not ret
 
 
 @logger.catch
