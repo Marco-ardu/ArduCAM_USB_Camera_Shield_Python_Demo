@@ -141,7 +141,7 @@ class HotPlugCamera():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--config-file', type=str, required=False, help='Specifies the configuration file.',
-                        default="C:\code\ArduCAM_USB_Camera_Shield_Python_Demo\IMX219_MIPI_2Lane_RAW10_8b_1920x1080.cfg")
+                        default="IMX219_MIPI_2Lane_RAW10_8b_1920x1080.cfg")
     parser.add_argument('-v', '--verbose', action='store_true', required=False, help='Output device information.')
     parser.add_argument('--preview-width', type=int, required=False, default=-1, help='Set the display width')
     parser.add_argument('-n', '--nopreview', action='store_true', required=False, help='Disable preview windows.')

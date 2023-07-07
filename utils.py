@@ -32,9 +32,12 @@ def GetErrorString(ErrorCode):
     return ErrorCode_Map[ErrorCode]
 
 def configBoard(handle, config):
+    # print(config.params_length)
+    # print(config.params)
+    # print(config.params[4:config.params_length])
     ArducamSDK.Py_ArduCam_setboardConfig(handle, config.params[0],
                                          config.params[1], config.params[2], config.params[3],
-                                         config.params[4:config.params_length])                                  
+                                         config.params[4:config.params_length + 4])                                  
 
 def camera_initCPLD(fileName, index):
     # load config file

@@ -36,11 +36,11 @@ class LinuxUSBDevice:
                 info = self.device_re.match(i)
                 if info:
                     dinfo = info.groupdict()
-                    return dinfo["id"] in [b'04b4:03f1', b'04B4:03F1']
+                    return dinfo["id"] in [b'04b4:03f2', b'04B4:03F1']
 
 
 DetectDeviceMap = {
-    "": LinuxUSBDevice,
+    "linux": LinuxUSBDevice,
     "win32": WinUSBDevice
 }
 
