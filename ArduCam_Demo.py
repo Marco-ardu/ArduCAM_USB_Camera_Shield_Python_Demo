@@ -160,9 +160,28 @@ class HotPlugCamera:
 
 
 if __name__ == "__main__":
+    from pathlib import Path
+    import os
+    # 获取当前用户的主目录路径
+    home_dir = Path.home()
+
+    # 创建USBConfig文件夹路径
+    usb_config_dir = home_dir / '.USBConfig'
+
+    # 如果USBConfig文件夹不存在，则创建它
+    if not usb_config_dir.exists():
+        usb_config_dir.mkdir()
+
+    # 创建config.cfg文件路径
+    config_file_path = usb_config_dir / 'config.cfg'
+
+    # 写入数据到config.cfg文件
+    with config_file_path.open('w') as file:
+        file.write(OV2640_config)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--config-file', type=str, required=False, help='Specifies the configuration file.',
-                        default="10.JPEG_capture_2592x1944.cfg")
+                        default=str(config_file_path))
     parser.add_argument('-v', '--verbose', action='store_true', required=False, help='Output device information.')
     parser.add_argument('--preview-width', type=int, required=False, default=1080, help='Set the display width')
     parser.add_argument('--preview-height', type=int, required=False, default=200, help='Set the display width')
@@ -174,3 +193,5 @@ if __name__ == "__main__":
     hotPlugCamera = HotPlugCamera(args)
     hotPlugCamera.start()
     hotPlugCamera.join()
+
+    os.remove(config_file_path)
