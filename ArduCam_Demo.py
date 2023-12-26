@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
     # 写入数据到config.cfg文件
     with config_file_path.open('w') as file:
-        file.write(OV2640_config)
+        file.write(usb_config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--config-file', type=str, required=False, help='Specifies the configuration file.',
