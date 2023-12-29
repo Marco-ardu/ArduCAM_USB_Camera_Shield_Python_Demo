@@ -161,7 +161,7 @@ VRCMD = 0xF9, 0x0004, 0x0000, 0
 [register parameter]
 
 //---------------------------------//
-REG = 0x0103, 0x00
+REG = 0x0103,0x00
 
 REG = 0x0100,0x00 
 
@@ -258,7 +258,7 @@ REG = 0x3059,0x40   //4b
 
 //bit[5]： 0：Non-gated  1：Gated clk
 //bit[4]： 0：LSB  1：MSB
-REG = 0x3060,0x10  
+REG = 0x3060,0x10
 
 
 REG = 0x0202, 0x00  //INTEGRATION[15:8]
@@ -267,11 +267,17 @@ REG = 0x0203, 0x80  //INTEGRATION[7:0]
 REG = 0x0205, 0x00  //ANALOG_GAIN[6:4]
 
 REG = 0x020E, 0x01  //DIGITAL_GAIN[9:8]
-REG = 0x020F, 0x00  //DIGITAL_GAIN[7:0] 
+REG = 0x020F, 0x00  //DIGITAL_GAIN[7:0]
 //---------------------------------//
 //stream on
 
-REG = 0x0100,0x01
+//REG = 0x0100,0x01
+//---------------------------------//
+REG = 0x3064,0x04   //bit[2]: trigger mode en
+REG = 0x0100,0x05   //hardware trigger
+REG = 0x3060,0x1D   //The divider 0x3060[3:2] should be set to 2.
+
+
 //---------------------------------//
 
 
