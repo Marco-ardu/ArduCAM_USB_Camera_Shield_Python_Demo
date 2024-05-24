@@ -75,9 +75,11 @@ class HotPlugCamera:
         global exit_
         self.camera = ArducamCamera(self.config_file)
         self.camera.registerCallback(self.notify)
+        cv2.namedWindow("Arducam", cv2.WINDOW_NORMAL)
         if self.fullscreen:
             cv2.namedWindow("Arducam", cv2.WINDOW_KEEPRATIO)
             cv2.setWindowProperty("Arducam", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.createTrackbar('Focus', 'Arducam', 0, 32767, self.camera.set_focus)
         while not exit_:
 
             with self.signal_:

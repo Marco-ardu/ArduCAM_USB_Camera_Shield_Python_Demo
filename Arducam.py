@@ -153,6 +153,10 @@ class ArducamCamera(object):
         return ArducamSDK.Py_ArduCam_setCtrl(self.handle, func_name, val)
 
     @logger.catch
+    def set_focus(self, focus):
+        self.setCtrl("setFocus", focus)
+
+    @logger.catch
     def dumpDeviceInfo(self):
         USB_CPLD_I2C_ADDRESS=0x46
         cpld_info={}
