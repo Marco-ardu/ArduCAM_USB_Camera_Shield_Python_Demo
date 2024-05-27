@@ -68,6 +68,7 @@ class ArducamCamera(object):
     @logger.catch
     def initSensor(self, flag):
         if flag:
+            camera_initCPLD(self.config_file, 0)
             camera_initSensor(self.handle, self.readConfig, self.cameraCfg['usbType'], self.I2cAddr)
 
     @logger.catch
