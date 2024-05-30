@@ -5,7 +5,7 @@ import numpy as np
 from loguru import logger
 from Arducam import *
 from ImageConvert import *
-
+from sharpness_check import *
 exit_ = False
 
 setPath()
@@ -36,6 +36,12 @@ display_fps.start = time.time()
 display_fps.frame_count = 0
 
 
+def save_to_csv(filePath, mean_sharpness, min_sharpness, best_sharpness):
+    line = "image_{}, {}, {}, {}\n".format(settingconfig["save_image_number"], mean_sharpness, min_sharpness, best_sharpness)
+
+    with open("{}/record.csv".format(filePath), 'a') as f:
+        f.write(line)
+
 class HotPlugCamera:
     def __init__(self, args):
         self.camera = None
@@ -48,6 +54,9 @@ class HotPlugCamera:
         self.fullscreen = args.fullscreen
         self.scale_width = self.preview_width
         self.scale_height = args.preview_height
+        self.output_path = "output_images"
+        if not os.path.exists(self.output_path):
+            os.makedirs(self.output_path)
 
     @logger.catch
     def start(self):
@@ -75,11 +84,12 @@ class HotPlugCamera:
         global exit_
         self.camera = ArducamCamera(self.config_file)
         self.camera.registerCallback(self.notify)
+
         cv2.namedWindow("Arducam", cv2.WINDOW_NORMAL)
         if self.fullscreen:
             cv2.namedWindow("Arducam", cv2.WINDOW_KEEPRATIO)
             cv2.setWindowProperty("Arducam", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        cv2.createTrackbar('Focus', 'Arducam', 0, 32767, self.camera.set_focus)
+
         while not exit_:
 
             with self.signal_:
@@ -94,7 +104,7 @@ class HotPlugCamera:
                     cv2.waitKey(1)
                     logger.info("wait")
                     continue
-
+            step = 0.001
             while not exit_:
                 if not self.camera.isOpened:
                     break
@@ -115,6 +125,8 @@ class HotPlugCamera:
                         continue
 
                     image = convert_image(data, cfg, self.camera.color_mode)
+                    color_frame = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                    mean_sharpness, min_sharpness, best_sharpness = test(color_frame, image)
 
                     if image is None:
                         logger.info("image is None")
@@ -138,7 +150,7 @@ class HotPlugCamera:
                         scale = self.scale_width / image.shape[1]
                         image = cv2.resize(image, None, fx=scale, fy=scale)
 
-                    cv2.imshow("Arducam", image)
+                    cv2.imshow("Arducam", color_frame)
                 else:
                     mind = cv2AddChineseText(
                                             np.full(fill_value=255, shape=(1080, 1920, 3), dtype=np.uint8),
@@ -151,10 +163,25 @@ class HotPlugCamera:
 
                 key = cv2.waitKey(1)
                 if key == ord('q'):
-                    exit_ = True
+                    exit(0)
                     break
                 elif key == ord('s'):
-                    np.array(data, dtype=np.uint8).tofile("image.raw")
+                    cv2.imwrite("{}/image_{}.jpg".format(self.output_path, settingconfig["save_image_number"]), image)
+                    # cv2.imwrite("{}.png".format(filename), gray)
+                    np.array(image).tofile("{}/image_{}.raw".format(self.output_path, settingconfig["save_image_number"]))
+                    # image.data.tofile("{}/image_{}.raw".format(self.output_path, settingconfig["save_image_number"]))
+                    save_to_csv(self.output_path, mean_sharpness, min_sharpness, best_sharpness)
+                    settingconfig["save_image_number"] += 1
+                    save_yml_image_number(settingconfig["save_image_number"])
+
+                elif key == ord('='): # '+' button
+                    upadte_threshold_mean(step)
+                elif key == ord('-'): # '-' button[]
+                    upadte_threshold_mean(-step)
+                elif key == ord('p'): # 'p' button
+                    upadte_threshold_min(step)
+                elif key == ord('o'): # 'o' button
+                    upadte_threshold_min(-step)
 
         if self.camera is not None:
             self.camera.stop()

@@ -3,7 +3,7 @@ from loguru import logger
 import ArducamSDK
 from DetectThread import DetectThread, I2CDeviceDetector, USBDeviceDetector
 from utils import *
-
+from sharpness_check import *
 
 setPath()
 
@@ -68,8 +68,10 @@ class ArducamCamera(object):
     @logger.catch
     def initSensor(self, flag):
         if flag:
-            camera_initCPLD(self.config_file, 0)
+            # camera_initCPLD(self.config_file, 0)
             camera_initSensor(self.handle, self.readConfig, self.cameraCfg['usbType'], self.I2cAddr)
+            self.setCtrl("setExposureTime", settingconfig["exposure"])
+            self.setCtrl("setAnalogueGain", settingconfig["gain"])
 
     @logger.catch
     def start(self):

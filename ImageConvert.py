@@ -101,7 +101,7 @@ def convert_image(data,cfg,color_mode):
         if cfg["u8PixelBytes"] == 2:
             image = dBytesToMat(data,bitWidth,Width,Height)
         else:
-            image = np.frombuffer(data, np.uint8).reshape( Height,Width , 1 )
+            image = np.frombuffer(data, np.uint8).reshape(Height,Width)
     if emImageFmtMode == ArducamSDK.FORMAT_MODE_RAW:
         if cfg["u8PixelBytes"] == 2:
             image = dBytesToMat(data,bitWidth,Width,Height)
