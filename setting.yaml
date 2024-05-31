@@ -1,5 +1,5 @@
 exposure: 3000
 gain: 400
-save_image_number: 12
+save_image_number: 14
 threshold_mean: 0.325
 threshold_min: 0.32

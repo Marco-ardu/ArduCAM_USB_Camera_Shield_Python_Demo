@@ -146,9 +146,9 @@ class HotPlugCamera:
                             borderType=cv2.BORDER_CONSTANT,
                         )
 
-                    elif self.scale_width != -1:
-                        scale = self.scale_width / image.shape[1]
-                        image = cv2.resize(image, None, fx=scale, fy=scale)
+                    # elif self.scale_width != -1:
+                    #     scale = self.scale_width / image.shape[1]
+                    #     image = cv2.resize(image, None, fx=scale, fy=scale)
 
                     cv2.imshow("Arducam", color_frame)
                 else:
@@ -168,7 +168,7 @@ class HotPlugCamera:
                 elif key == ord('s'):
                     cv2.imwrite("{}/image_{}.jpg".format(self.output_path, settingconfig["save_image_number"]), image)
                     # cv2.imwrite("{}.png".format(filename), gray)
-                    np.array(image).tofile("{}/image_{}.raw".format(self.output_path, settingconfig["save_image_number"]))
+                    np.frombuffer(data).tofile("{}/image_{}.raw".format(self.output_path, settingconfig["save_image_number"]))
                     # image.data.tofile("{}/image_{}.raw".format(self.output_path, settingconfig["save_image_number"]))
                     save_to_csv(self.output_path, mean_sharpness, min_sharpness, best_sharpness)
                     settingconfig["save_image_number"] += 1
