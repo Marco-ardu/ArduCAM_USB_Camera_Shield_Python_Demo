@@ -6,8 +6,10 @@ from loguru import logger
 from Arducam import *
 from ImageConvert import *
 from sharpness_check import *
+from matplotlib import pyplot as plt
+import matplotlib as mpl
 exit_ = False
-
+cmap = mpl.colormaps['Spectral']
 setPath()
 
 
@@ -41,6 +43,7 @@ def save_to_csv(filePath, mean_sharpness, min_sharpness, best_sharpness):
 
     with open("{}/record.csv".format(filePath), 'a') as f:
         f.write(line)
+
 
 class HotPlugCamera:
     def __init__(self, args):
@@ -78,6 +81,21 @@ class HotPlugCamera:
         if flag:
             with self.signal_:
                 self.signal_.notify()
+
+    def show_heatmap(self, sharpness_scores_sectors, mean_sharpness, min_sharpness, coverage):
+        fig, ax = plt.subplots()
+        plt.imshow(sharpness_scores_sectors, vmin=0.25, vmax=0.4, cmap=cmap, aspect='auto')
+        for i in range(sharpness_scores_sectors.shape[0]):
+            for j in range(sharpness_scores_sectors.shape[1]):
+                text = ax.text(j, i, f"{sharpness_scores_sectors[i, j]:.2f}",
+                                ha="center", va="center", color="k")
+        plt.axis('off')
+        print(f'mean: {mean_sharpness}, min: {min_sharpness}, coverage: {coverage}')
+        plt.savefig(f"{self.output_path}/image_{settingconfig['save_image_number']}_sharpness.png", bbox_inches='tight')
+        plt.close()
+        plt.clf()
+        # fig.clf()
+        ax.cla()
 
     @logger.catch
     def runCamera(self):
@@ -126,7 +144,7 @@ class HotPlugCamera:
 
                     image = convert_image(data, cfg, self.camera.color_mode)
                     color_frame = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-                    mean_sharpness, min_sharpness, best_sharpness = test(color_frame, image)
+                    mean_sharpness, min_sharpness, best_sharpness, sharpness_scores_sectors, coverage = test(color_frame, image)
 
                     if image is None:
                         logger.info("image is None")
@@ -164,9 +182,10 @@ class HotPlugCamera:
                 key = cv2.waitKey(1)
                 if key == ord('q'):
                     exit(0)
-                    break
                 elif key == ord('s'):
+                    self.show_heatmap(sharpness_scores_sectors, mean_sharpness, min_sharpness, coverage)
                     cv2.imwrite("{}/image_{}.jpg".format(self.output_path, settingconfig["save_image_number"]), image)
+                    cv2.imwrite("{}/image_{}_detect.jpg".format(self.output_path, settingconfig["save_image_number"]), color_frame)
                     # cv2.imwrite("{}.png".format(filename), gray)
                     np.frombuffer(data).tofile("{}/image_{}.raw".format(self.output_path, settingconfig["save_image_number"]))
                     # image.data.tofile("{}/image_{}.raw".format(self.output_path, settingconfig["save_image_number"]))
