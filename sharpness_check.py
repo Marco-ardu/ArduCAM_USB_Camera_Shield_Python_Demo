@@ -2,17 +2,18 @@ import numpy as np
 import cv2
 import yaml
 
-ARUCO_DICT = cv2.aruco.Dictionary_get( cv2.aruco.DICT_4X4_1000 )
-# BOARD = cv2.aruco.CharucoBoard_create(19, 13, 50/1000, 39/1000, ARUCO_DICT)
-BOARD = cv2.aruco.CharucoBoard_create(33, 23, 50/1000, 39/1000, ARUCO_DICT)
-ARUCO_PARAMS = cv2.aruco.DetectorParameters_create()
-ARUCO_PARAMS.minMarkerDistanceRate = 0.01
 
 # set some example thresholds for FAIL/PASS criteria
 with open('setting.yaml', 'r') as stream:
     settingconfig = yaml.load(stream, Loader=yaml.FullLoader)
 threshold_mean = settingconfig["threshold_mean"]
 threshold_min = settingconfig["threshold_min"]
+
+ARUCO_DICT = cv2.aruco.Dictionary_get( cv2.aruco.DICT_4X4_1000 )
+BOARD = cv2.aruco.CharucoBoard_create(settingconfig["CharucoBoardWidth"], settingconfig["CharucoBoardHeight"], settingconfig["squareLength"]/1000, settingconfig["markerLength"]/1000, ARUCO_DICT)
+# BOARD = cv2.aruco.CharucoBoard_create(33, 23, 50/1000, 39/1000, ARUCO_DICT)
+ARUCO_PARAMS = cv2.aruco.DetectorParameters_create()
+ARUCO_PARAMS.minMarkerDistanceRate = 0.01
 
 def save_yml_image_number(image_number):
     with open('setting.yaml', 'r') as stream:
