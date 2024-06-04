@@ -40,7 +40,7 @@ def detect_charuco_board(image: np.array):
         num_corners, corners, ids = cv2.aruco.interpolateCornersCharuco(marker_corners,marker_ids,image, BOARD, minMarkers = 1)
         return num_corners, corners, ids, marker_corners, marker_ids
     else:
-        return 0, np.array([]), np.array([]), np.array([]), np.array([])    
+        return 0, np.array([]), np.array([]), np.array([]), np.array([])
 
 def analyze_sharpness_fft(img, corners, roi_size, fft_cutoff):
     sharpness_scores = []
@@ -141,7 +141,7 @@ def test(img, gray):
     
         return mean_sharpness, min_sharpness, best_sharpness, sharpness_scores_sectors, coverage
     
-    return -1, -1, -1
+    return -1, -1, -1, -1, -1
         # cv2.imshow('Image', img)
         # display = cv2.resize(img, None, fx=0.5, fy=0.5)
         # cv2.imshow("Image", display)

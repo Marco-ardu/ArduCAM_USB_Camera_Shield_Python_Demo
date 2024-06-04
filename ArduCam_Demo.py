@@ -183,7 +183,8 @@ class HotPlugCamera:
                 if key == ord('q'):
                     exit(0)
                 elif key == ord('s'):
-                    self.show_heatmap(sharpness_scores_sectors, mean_sharpness, min_sharpness, coverage)
+                    if mean_sharpness != -1:
+                        self.show_heatmap(sharpness_scores_sectors, mean_sharpness, min_sharpness, coverage)
                     cv2.imwrite("{}/image_{}.jpg".format(self.output_path, settingconfig["save_image_number"]), image)
                     cv2.imwrite("{}/image_{}_detect.jpg".format(self.output_path, settingconfig["save_image_number"]), color_frame)
                     # cv2.imwrite("{}.png".format(filename), gray)
