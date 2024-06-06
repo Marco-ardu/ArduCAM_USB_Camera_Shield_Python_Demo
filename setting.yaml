@@ -15,5 +15,5 @@ min_zeros: 1
 roi_size: 4
 save_image_number: 24
 squareLength: 50
-threshold_mean: 0.325
-threshold_min: 0.32
+threshold_mean: 0.31690878812430406
+threshold_min: 0.29431112009621324
