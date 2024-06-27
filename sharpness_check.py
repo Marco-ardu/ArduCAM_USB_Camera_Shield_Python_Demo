@@ -58,7 +58,7 @@ def analyze_sharpness_fft(img, corners, roi_size, fft_cutoff):
             y = roi_size
         if y >= h - roi_size:
             y = h - roi_size-1
-        roi = img[y - roi_size:y + roi_size, x - roi_size:x + roi_size]
+        roi = img[y - roi_size:y + roi_size, x - roi_size:x + roi_size].copy()
         cv2.normalize(roi, roi, 0, 255, cv2.NORM_MINMAX)
         fft = np.fft.fft2(roi)
         fft[0:fft_cutoff, 0:fft_cutoff] = 0
