@@ -13,7 +13,7 @@ min_sectors: 1
 min_sharpness_quantile: 0.05
 min_zeros: 0
 roi_size: 4
-save_image_number: 24
+save_image_number: 0
 squareLength: 50
 threshold_mean: 0.326
 threshold_min: 0.324
