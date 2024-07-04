@@ -54,4 +54,8 @@ python3 ArduCam_Demo.py -v --preview-width 1280 -f <path for camera cfg>
 python3 ArduCam_Demo.py -v --preview-width 1280 -f IMX477/4032x3040/IMX477_2Lane_4032x3040_RAW8_A.cfg
 ```
 
+## pack
+```shell
+python -m PyInstaller -D .\ArduCam_Demo.py -n "arducam_sharpness_check_ov9782" --collect-binaries arducam_config_parser
+```
 **Note: Configuration files can be found here: [ArduCAM_USB_Camera_Shield](https://github.com/ArduCAM/ArduCAM_USB_Camera_Shield/tree/master/Config)**
