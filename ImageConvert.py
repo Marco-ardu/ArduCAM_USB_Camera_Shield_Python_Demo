@@ -70,15 +70,15 @@ def separationImage(data,Width,Height):
 @logger.catch
 def convert_color(image,color_mode):
     if color_mode == 0:
-        image = cv2.cvtColor(image,COLOR_BayerRG2BGR)
+        image = cv2.cvtColor(image, cv2.COLOR_BayerRG2BGR_EA)
     if color_mode == 1:
-        image = cv2.cvtColor(image,COLOR_BayerGR2BGR)
+        image = cv2.cvtColor(image, cv2.COLOR_BayerGR2BGR_EA)
     if color_mode == 2:
-        image = cv2.cvtColor(image,COLOR_BayerGB2BGR)
+        image = cv2.cvtColor(image, cv2.COLOR_BayerGB2BGR_EA)
     if color_mode == 3:
-        image = cv2.cvtColor(image,COLOR_BayerBG2BGR)
+        image = cv2.cvtColor(image, cv2.COLOR_BayerBG2BGR_EA)
     if 0 > color_mode > 3:
-        image = cv2.cvtColor(image,COLOR_BayerGB2BGR)
+        image = cv2.cvtColor(image, cv2.COLOR_BayerGB2BGR_EA)
     return image
 
 

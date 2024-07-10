@@ -142,10 +142,12 @@ class HotPlugCamera:
                         logger.info("data is None")
                         continue
 
-                    image = convert_image(data, cfg, self.camera.color_mode)
                     if cfg["emImageFmtMode"] == ArducamSDK.FORMAT_MODE_RAW:
-                        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                    color_frame = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                        color_frame = convert_image(data, cfg, self.camera.color_mode)
+                        image = cv2.cvtColor(color_frame, cv2.COLOR_BGR2GRAY)
+                    else:
+                        image = convert_image(data, cfg, self.camera.color_mode)
+                        color_frame = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
                     mean_sharpness, min_sharpness, best_sharpness, sharpness_scores_sectors, coverage = test(color_frame, image)
 
                     if image is None:
