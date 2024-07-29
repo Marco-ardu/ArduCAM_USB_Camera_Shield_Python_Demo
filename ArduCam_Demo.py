@@ -185,7 +185,7 @@ class HotPlugCamera:
 
                 key = cv2.waitKey(1)
                 if key == ord('q'):
-                    exit(0)
+                    sys.exit(0)
                 elif key == ord('s'):
                     if mean_sharpness != -1:
                         self.show_heatmap(sharpness_scores_sectors, mean_sharpness, min_sharpness, coverage)

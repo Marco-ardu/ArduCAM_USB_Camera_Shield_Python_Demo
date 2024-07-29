@@ -3,9 +3,9 @@ CharucoBoardWidth: 19
 binx: 12
 biny: 8
 coverage_threshold: 0.8300000000000001
-exposure: 3000
+exposure: 100000
 fft_cutoff: 2
-gain: 400
+gain: 100
 markerLength: 37
 mean_sectors: 1
 mean_zeros: 1
